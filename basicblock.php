@@ -3,7 +3,7 @@
 $bb_currentBB = array(
     "entryPoint"  => null,
     "instPool"    => array(),
-    "instCount"   => 0
+    "instCount"   => 0,
     "fallthrough" => null,
     "taken"       => null,
 );
@@ -16,10 +16,28 @@ function bb_clearCurrentBB() {
     $bb_currentBB = array(
         "entryPoint"  => null,
         "instPool"    => array(),
-        "instCount"   => 0
+        "instCount"   => 0,
         "fallthrough" => null,
         "taken"       => null,
     );
+}
+
+function bb_printAllLinks() {
+    global $bb_pool;
+
+    foreach ($bb_pool as $bb) {
+        bb_printLink($bb);
+    }
+}
+
+function bb_setTaken($addr) {
+    global $bb_currentBB;
+    $bb_currentBB["taken"] = $addr;
+}
+
+function bb_setFallthrough($addr) {
+    global $bb_currentBB;
+    $bb_currentBB["fallthrough"] = $addr;
 }
 
 function bb_addInstruction($inst) {
@@ -32,26 +50,26 @@ function bb_addInstruction($inst) {
 function bb_printBox() {
     global $bb_currentBB;
 
-    $recordStr = "  bb" . $bb_currentBB["entryPoint"] . " [label={" . $bb_currentBB["entryPoint"] . " | ";
+    $recordStr = "  bb" . $bb_currentBB["entryPoint"] . " [label=\"{" . $bb_currentBB["entryPoint"] . " | ";
 
     // for-each-instructions
     $instStr = "";
     while (($inst = array_pop($bb_currentBB["instPool"])) != null) {
-        $instStr = $inst["addr"] . " : " . $inst["opcode"] . " " . $inst["param"] . "\\n" . $instStr;
+        $instStr = $inst["addr"] . " : " . $inst["opcode"] . "\\n" . $instStr;
+//        $instStr = $inst["addr"] . " : " . $inst["opcode"] . " " . $inst["param"] . "\\n" . $instStr;
     }
 
-    echo $recordStr . $instStr . "}]\n";
+    echo $recordStr . $instStr . "}\"];\n";
 }
 
-function bb_printLink() {
-    global $bb_currentBB;
+function bb_printLink($bb) {
 
-    if ($bb_currentBB["fallthrough"]) {
-        echo "  bb" . $bb_currentBB["entryPoint"] . " -> bb" . $bb_currentBB["fallthrough"] . "\n";
+    if ($bb["fallthrough"]) {
+        echo "  bb" . $bb["entryPoint"] . " -> bb" . $bb["fallthrough"] . ";\n";
     }
 
-    if ($bb_currentBB["taken"]) {
-        echo "  bb" . $bb_currentBB["entryPoint"] . " -> bb" . $bb_currentBB["taken"] . "\n";
+    if ($bb["taken"]) {
+        echo "  bb" . $bb["entryPoint"] . " -> bb" . $bb["taken"] . ";\n";
     }
 }
 

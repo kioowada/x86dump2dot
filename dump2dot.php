@@ -5,6 +5,7 @@ require "branchinstructions.php";
 require "jumpinstructions.php";
 require "returninstructions.php";
 require "instruction.php";
+require "basicblock.php";
 
 $filename = "./example";
 
@@ -79,7 +80,7 @@ if ($entryPoint == null) {
 $callStack = array();
 function function_call($returnAddr, $name) {
     global $callStack;
-    echo "### FUNCTION $name CALLED\n";
+//    echo "### FUNCTION $name CALLED\n";
 
     array_push($callStack, array(
         "name" => $name,
@@ -90,30 +91,42 @@ function function_return() {
     global $callStack;
     $ret = array_pop($callStack);
 
-    echo "#### FUNCTION $name RETURNED\n";
+//    echo "#### FUNCTION $name RETURNED\n";
 
     return $ret;
 }
 
-$currentBB;
-$linkPool;
 
 function_call(null, "main");
+
+echo "digraph main {\n";
+echo "  graph [nodesep = 0.7];\n";
+echo "  node [shape = record, height = 0.01,\n";
+echo "   fontname = \"Helvetica\", fontsize = 9];\n";
+
 startAnalysis($allInstructions[$entryPoint]);
+bb_printAllLinks();
+echo "}\n";
 
 function startAnalysis($nowInst) {
-    // TODO global
+    global $callStack;
+    global $jiArray;
+    global $biArray;
+    global $riArray;
+    global $bb_currentBB;
+    global $allInstructions;
 
-
+//    echo "startAnalysis for " . $nowInst["addr"] . "\n";
+    $bb_currentBB["entryPoint"] = $nowInst["addr"];
 
 
     while (count($callStack) > 0) {
         $bbEnd = false; // ベーシックブロックの区切り
-        echo $nowInst["addr"] . " : [" . $nowInst["opcode"] . "] " . $nowInst["param"] . "\n";
+//        echo $nowInst["addr"] . " : [" . $nowInst["opcode"] . "] " . $nowInst["param"] . "\n";
 
         // ジャンプの確認
         if (in_array($nowInst["opcode"], $jiArray)) { // ジャンプ(関数CALL)
-            echo "JUMP\n";
+//            echo "JUMP\n";
 
             $nextAddr = "0x" . explode(" ", $nowInst["param"])[0];
             $returnAddr = $nowInst["nextAddr"];
@@ -122,10 +135,12 @@ function startAnalysis($nowInst) {
             function_call($returnAddr, "TODO"); // TODO name
             $bbEnd = true; // これどうしよう? FIXME
 
+            bb_setTaken($nextAddr);
         } else if (in_array($nowInst["opcode"], $riArray)) { // 関数RET
             $call = function_return();
             $nextAddr = $call["return"];
             $bbEnd = true; // これもどうしよう? FIXME
+            bb_setTaken($nextAddr);
         } else {
             $nextAddr = $nowInst["nextAddr"];
         }
