@@ -10,5 +10,6 @@
 $biArray = array(
     "je",
     "jne",
+    "jle",
 );
 

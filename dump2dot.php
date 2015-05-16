@@ -7,7 +7,7 @@ require "returninstructions.php";
 require "instruction.php";
 require "basicblock.php";
 
-$filename = "./example";
+$filename = "./branch";
 
 $fp = fopen($filename, 'r');
 
@@ -58,6 +58,7 @@ do { // 関数単位/*{{{*/
             "isEntryPoint"  => $isMainFunc,
             "nextAddr"      => $nextAddr,
             "instSize"      => $instSize,
+            "mnemonic"      => $mnemonic,
         );
 
 
@@ -78,6 +79,7 @@ if ($entryPoint == null) {
 
 // 関数のコールスタック
 $callStack = array();
+$savedCallStack = array();
 function function_call($returnAddr, $name) {
     global $callStack;
 //    echo "### FUNCTION $name CALLED\n";
@@ -95,6 +97,25 @@ function function_return() {
 
     return $ret;
 }
+function save_callstack() {
+    global $savedCallStack;
+    global $callStack;
+
+    $savedCallStack = array();
+    for ($i = 0; $i < count($callStack); $i++) {
+        array_push($savedCallStack, $callStack[$i]);
+    }
+}
+function restore_callstack() {
+    global $savedCallStack;
+    global $callStack;
+
+    $callStack = array();
+    for ($i = 0; $i < count($savedCallStack); $i++) {
+        array_push($callStack, $savedCallStack[$i]);
+    }
+}
+
 
 
 function_call(null, "main");
@@ -116,16 +137,37 @@ function startAnalysis($nowInst) {
     global $bb_currentBB;
     global $allInstructions;
 
-//    echo "startAnalysis for " . $nowInst["addr"] . "\n";
-    $bb_currentBB["entryPoint"] = $nowInst["addr"];
+    if (bb_checkExistance($nowInst["addr"]) == true) {
+        // このBBはもう解析済みなので飛ばす
+        return;
+    }
 
+    $bb_currentBB["entryPoint"] = $nowInst["addr"];
 
     while (count($callStack) > 0) {
         $bbEnd = false; // ベーシックブロックの区切り
-//        echo $nowInst["addr"] . " : [" . $nowInst["opcode"] . "] " . $nowInst["param"] . "\n";
 
-        // ジャンプの確認
-        if (in_array($nowInst["opcode"], $jiArray)) { // ジャンプ(関数CALL)
+        if (in_array($nowInst["opcode"], $biArray)) { // 条件分岐
+            $nextAddr = "0x" . explode(" ", $nowInst["param"])[0];
+            $returnAddr = $nowInst["nextAddr"];
+
+            bb_addInstruction($nowInst);
+            bb_setTaken($nextAddr);
+            bb_setFallthrough($returnAddr);
+
+            bb_printBox();
+            bb_save();
+            bb_clearCurrentBB();
+
+            // DFSで探索する
+            // TODO ここでコールスタックをそれぞれにセーブしないといけない
+            save_callstack();
+            startAnalysis($allInstructions[$nextAddr]);
+            restore_callstack();
+            startAnalysis($allInstructions[$returnAddr]);
+
+            return;
+        } else if (in_array($nowInst["opcode"], $jiArray)) { // ジャンプ(関数CALL)
 //            echo "JUMP\n";
 
             $nextAddr = "0x" . explode(" ", $nowInst["param"])[0];
@@ -135,12 +177,12 @@ function startAnalysis($nowInst) {
             function_call($returnAddr, "TODO"); // TODO name
             $bbEnd = true; // これどうしよう? FIXME
 
-            bb_setTaken($nextAddr);
+            bb_setCall($nextAddr);
         } else if (in_array($nowInst["opcode"], $riArray)) { // 関数RET
             $call = function_return();
             $nextAddr = $call["return"];
             $bbEnd = true; // これもどうしよう? FIXME
-            bb_setTaken($nextAddr);
+            bb_setReturn($nextAddr);
         } else {
             $nextAddr = $nowInst["nextAddr"];
         }
