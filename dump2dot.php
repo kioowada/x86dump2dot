@@ -8,6 +8,11 @@ require "instruction.php";
 require "basicblock.php";
 
 $filename = "./branch";
+if (isset($argv[1])) {
+    $filename = "./" . $argv[1];
+} else {
+    die("filename not specified");
+}
 
 $fp = fopen($filename, 'r');
 

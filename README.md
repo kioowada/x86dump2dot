@@ -8,4 +8,4 @@ objdump -d main >main.disas
 
 dump2dot.php main.disas >main.dot
 
-dot -Tpng main.dot -o main.pdf
+dot -Tpng main.dot -o main.png
