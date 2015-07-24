@@ -27,6 +27,8 @@ function bb_clearCurrentBB() {
 }
 
 function bb_checkExistance($entryPoint) {
+  global $bb_pool;
+
     if (isset($bb_pool[$entryPoint])) {
         return true;
     } else {
